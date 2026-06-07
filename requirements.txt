@@ -1,0 +1,18 @@
+# Core scientific stack (already installed via system Python 3.13)
+# pandas>=3.0
+# numpy>=2.0
+# scipy>=1.17
+# statsmodels>=0.14
+# pyarrow>=23
+# tqdm>=4.0
+# PyYAML>=6.0
+
+# Domain packages to install
+datasets>=2.20,<5.0
+huggingface_hub>=0.24
+pymannkendall>=1.4
+scikit-learn>=1.5
+vaderSentiment>=3.3
+langdetect>=1.0
+matplotlib>=3.9
+seaborn>=0.13

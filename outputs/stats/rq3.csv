@@ -1,0 +1,6 @@
+metric,value,p,ci_lo,ci_hi
+Spearman rho (overall),0.5101622718259216,0.0,0.5068073381392094,0.5135017520678778
+Accuracy (overall),0.8076472093122415,,,
+Macro-F1 (overall),0.5414253403951427,,,
+Kappa quadratic (overall),0.5918883014347288,,,
+Chi2 Beauty vs Sports agreement,9.329817511893287,0.002254548058995625,,

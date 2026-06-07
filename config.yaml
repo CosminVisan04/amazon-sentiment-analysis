@@ -1,0 +1,65 @@
+categories:
+  beauty:
+    name: "Beauty"
+    hf_config: "raw_review_Beauty_and_Personal_Care"
+    jsonl_name: "Beauty_and_Personal_Care"
+    display_name: "Beauty & Personal Care"
+  sports:
+    name: "Sports"
+    hf_config: "raw_review_Sports_and_Outdoors"
+    jsonl_name: "Sports_and_Outdoors"
+    display_name: "Sports & Outdoors"
+
+year_range:
+  start: 2015
+  end: 2023
+
+sampling:
+  samples_per_cell: 11112      # target reviews per (category × year) → ~200K total (11112 × 18 cells)
+  enforce_equal_cells: false   # if true, down-cap all cells to smallest cell size
+  seed: 42
+
+# VADER thresholds (standard, exposed for auditability)
+vader:
+  positive_threshold: 0.05
+  negative_threshold: -0.05
+
+# Star-rating → sentiment label mapping
+star_labels:
+  positive: [4, 5]
+  neutral: [3]
+  negative: [1, 2]
+
+# RQ4 distinctive words
+words:
+  min_doc_freq: 10     # minimum document frequency for a token
+  top_n: 25            # top N words per side to display
+  ngram_range: [1, 2]  # unigrams + bigrams
+
+# Bootstrap settings (used across all CI computations)
+bootstrap:
+  n_iterations: 10000
+  seed: 42
+  ci_level: 0.95
+
+# Paths (relative to project root)
+paths:
+  data_dir: "data"
+  outputs_dir: "outputs"
+  figures_dir: "outputs/figures"
+  tables_dir: "outputs/tables"
+  stats_dir: "outputs/stats"
+  qualitative_dir: "outputs/qualitative"
+  log_file: "run.log"
+
+# Mismatch mining thresholds (for RQ3)
+mismatch:
+  high_star_low_vader: { min_rating: 4, max_compound: -0.5 }
+  low_star_high_vader: { max_rating: 2, min_compound: 0.5 }
+  sample_per_direction: 50
+
+# HuggingFace dataset
+hf:
+  dataset_name: "McAuley-Lab/Amazon-Reviews-2023"
+  split: "full"
+  trust_remote_code: true
