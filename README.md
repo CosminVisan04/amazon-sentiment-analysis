@@ -28,12 +28,12 @@ python run_all.py --force   # then delete data parquet files manually
 | Script | Input | Output | What it does |
 |---|---|---|---|
 | `src/01_sample.py` | HuggingFace stream (JSONL fallback if streaming fails) | `data/sample_raw.parquet` | Stratified reservoir sampling, 11,112 reviews/(category × year) |
-| `src/02_preprocess.py` | `sample_raw.parquet` | `data/sample_clean.parquet` | HTML/markup cleaning, apostrophe normalisation, dedup (scoped to category × year), language filter, length recording |
+| `src/02_preprocess.py` | `sample_raw.parquet` | `data/sample_clean.parquet` | HTML/markup cleaning, apostrophe normalisation, scoped to category × year, language filter, length recording |
 | `src/03_sentiment.py` | `sample_clean.parquet` | `data/sample_scored.parquet` | VADER scoring, vader_label, star_label |
 | `src/04_rq1_distributions.py` | `sample_scored.parquet` | figures + stats | Mann-Whitney U, KS, Cliff's delta, bootstrap CI |
 | `src/05_rq2_temporal.py` | `sample_scored.parquet` | figures + stats | Mann-Kendall, Sen's slope, interaction OLS |
 | `src/06_rq3_agreement.py` | `sample_scored.parquet` | figures + stats + qualitative | VADER validation: Spearman, kappa, majority-class baseline, length buckets, mismatches |
-| `src/07_rq4_words.py` | `sample_scored.parquet` | figures + tables + qualitative | Fightin' Words log-odds (negation-preserving), TF-IDF |
+| `src/07_rq4_words.py` | `sample_scored.parquet` | figures + tables + qualitative | Fighting Words log-odds (negation-preserving), TF-IDF |
 
 Each phase is **cache-aware**: it checks for its output file and exits immediately if
 it already exists. Delete the output to force a re-run of that phase only - deleting
@@ -44,7 +44,7 @@ re-streaming the raw data.
 
 ## Configuration
 
-All parameters live in `config.yaml`.
+All parameters are in `config.yaml`.
 
 Key settings:
 ```yaml
@@ -85,5 +85,5 @@ bootstrap:
 |---|---|
 | `io.py` | Config loading, parquet I/O, logging setup |
 | `stats.py` | Bootstrap CI, Cliff's delta, Holm-Bonferroni, Spearman CI, Cohen's κ |
-| `logodds.py` | Fightin' Words implementation + unit test |
+| `logodds.py` | Fighting Words implementation + unit test |
 | `plotting.py` | Consistent style, Wong colour-blind palette, PDF+PNG saver |
