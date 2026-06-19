@@ -1,32 +1,3 @@
-"""
-Phase 6 — RQ3: How well do star ratings and VADER sentiment scores agree,
-and in which cases do they diverge?
-
-This module also serves as the VADER validation module (F4/F5):
-- Length-bucketed agreement tests VADER's weakness on short reviews
-- Mismatch mining surfaces sarcasm/domain-language examples for the Discussion
-
-Tests
------
-- Spearman rho (rating vs compound), overall and per category, with 95% CI
-- Confusion matrix vader_label vs star_label: accuracy, macro-F1, per-class P/R
-- Cohen's quadratic-weighted kappa, overall and per category
-- Chi-square on agreement counts: does one category agree more?
-- Per-length-bucket accuracy with bootstrap 95% CI
-
-Figures
--------
-outputs/figures/rq3_confusion_beauty.{pdf,png}
-outputs/figures/rq3_confusion_sports.{pdf,png}
-outputs/figures/rq3_agreement_by_length.{pdf,png}
-
-Outputs
--------
-outputs/stats/rq3.json
-outputs/stats/rq3.csv
-outputs/qualitative/mismatches_Beauty.csv
-outputs/qualitative/mismatches_Sports.csv
-"""
 import json
 import logging
 import sys
@@ -52,28 +23,20 @@ logger = logging.getLogger("amazon_sentiment.06_rq3")
 LABEL_ORDER = ["negative", "neutral", "positive"]
 
 
-# ── Spearman + CI ─────────────────────────────────────────────────────────────
-
+# spearman correlation with a confidence interval
 def spearman_with_ci(x, y, ci: float = 0.95) -> dict:
     rho, p = sp_stats.spearmanr(x, y)
     lo, hi = spearman_ci(rho, len(x), ci)
     return {"rho": float(rho), "p": float(p), "ci_lo": lo, "ci_hi": hi, "n": len(x)}
 
 
-# ── Majority-class baseline ───────────────────────────────────────────────────
-
+# accuracy of always predicting the majority class
 def majority_class_baseline(y_true) -> dict:
-    """
-    Accuracy a trivial classifier achieves by always predicting the most
-    frequent star_label class. Context for how much above chance/baseline
-    VADER's classification accuracy actually is.
-    """
     counts = pd.Series(y_true).value_counts(normalize=True)
     return {"majority_class": str(counts.index[0]), "baseline_accuracy": float(counts.iloc[0])}
 
 
-# ── Classification metrics ────────────────────────────────────────────────────
-
+# accuracy, macro-f1, kappa, and per-class metrics
 def classification_metrics(y_true, y_pred) -> dict:
     acc = accuracy_score(y_true, y_pred)
     f1_macro = f1_score(y_true, y_pred, average="macro", labels=LABEL_ORDER, zero_division=0)
@@ -99,8 +62,7 @@ def classification_metrics(y_true, y_pred) -> dict:
     }
 
 
-# ── Confusion matrix figure ───────────────────────────────────────────────────
-
+# plots a confusion matrix heatmap for one category
 def plot_confusion(y_true, y_pred, category: str, figures_dir: Path):
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -118,14 +80,13 @@ def plot_confusion(y_true, y_pred, category: str, figures_dir: Path):
     )
     ax.set_xlabel("VADER Label (predicted)")
     ax.set_ylabel("Star Label (true)")
-    ax.set_title(f"Confusion Matrix — {category}")
+    ax.set_title(f"Confusion Matrix - {category}")
     fig.tight_layout()
     save_figure(fig, figures_dir, f"rq3_confusion_{category.lower()}")
     logger.info(f"Saved rq3_confusion_{category.lower()}")
 
 
-# ── Agreement by length bucket ────────────────────────────────────────────────
-
+# accuracy by review length bucket with bootstrap ci
 def agreement_by_length(df: pd.DataFrame, boot_cfg: dict) -> pd.DataFrame:
     bins   = [0, 5, 20, 50, np.inf]
     labels = ["≤5", "6–20", "21–50", ">50"]
@@ -144,6 +105,7 @@ def agreement_by_length(df: pd.DataFrame, boot_cfg: dict) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+# plots agreement accuracy across length buckets
 def plot_agreement_by_length(length_df: pd.DataFrame, figures_dir: Path):
     import matplotlib.pyplot as plt
 
@@ -171,8 +133,7 @@ def plot_agreement_by_length(length_df: pd.DataFrame, figures_dir: Path):
     logger.info("Saved rq3_agreement_by_length")
 
 
-# ── Mismatch mining ───────────────────────────────────────────────────────────
-
+# samples and saves rating-vader disagreement cases
 def mine_mismatches(df: pd.DataFrame, cfg: dict, category: str, qual_dir: Path):
     mm_cfg = cfg["mismatch"]
     seed = cfg["sampling"]["seed"]
@@ -180,13 +141,11 @@ def mine_mismatches(df: pd.DataFrame, cfg: dict, category: str, qual_dir: Path):
 
     cols = ["category", "year", "rating", "vader_compound", "token_len", "review_text"]
 
-    # High star, low VADER (potential sarcasm or domain language)
     high_star_low_vader = df[
         (df["rating"] >= mm_cfg["high_star_low_vader"]["min_rating"]) &
         (df["vader_compound"] <= mm_cfg["high_star_low_vader"]["max_compound"])
     ][cols]
 
-    # Low star, high VADER (ironic positivity or domain-specific negatives)
     low_star_high_vader = df[
         (df["rating"] <= mm_cfg["low_star_high_vader"]["max_rating"]) &
         (df["vader_compound"] >= mm_cfg["low_star_high_vader"]["min_compound"])
@@ -211,8 +170,7 @@ def mine_mismatches(df: pd.DataFrame, cfg: dict, category: str, qual_dir: Path):
     return len(high_star_low_vader), len(low_star_high_vader)
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
+# runs phase 6 end to end
 def main():
     cfg = load_config()
 
@@ -229,7 +187,6 @@ def main():
     boot_cfg = cfg["bootstrap"]
     results  = {"rq": "RQ3", "question": "How well do star ratings and VADER sentiment scores agree?"}
 
-    # ── Spearman correlation ──────────────────────────────────────────────────
     spearman_overall = spearman_with_ci(df["rating"], df["vader_compound"])
     results["spearman_overall"] = spearman_overall
     logger.info(
@@ -245,7 +202,6 @@ def main():
         logger.info(f"Spearman {cat}: rho={sp['rho']:.4f}, p={sp['p']:.4e}, CI=[{sp['ci_lo']:.4f}, {sp['ci_hi']:.4f}]")
     results["spearman_per_category"] = spearman_per_cat
 
-    # ── Classification metrics ────────────────────────────────────────────────
     metrics_overall = classification_metrics(df["star_label"], df["vader_label"])
     results["classification_overall"] = metrics_overall
     logger.info(
@@ -264,7 +220,6 @@ def main():
         )
     results["classification_per_category"] = metrics_per_cat
 
-    # ── Majority-class baseline ───────────────────────────────────────────────
     baseline_overall = majority_class_baseline(df["star_label"])
     baseline_per_cat = {
         cat: majority_class_baseline(df[df["category"] == cat]["star_label"])
@@ -283,7 +238,6 @@ def main():
             f"Majority-class baseline ({cat}): {b['majority_class']} = {b['baseline_accuracy']:.4f}"
         )
 
-    # ── Chi-square on agreement counts per category ───────────────────────────
     agree_beauty = (df[df["category"] == "Beauty"]["vader_label"] ==
                     df[df["category"] == "Beauty"]["star_label"]).sum()
     disagree_beauty = len(df[df["category"] == "Beauty"]) - agree_beauty
@@ -303,19 +257,16 @@ def main():
         f"Chi-square agreement Beauty vs Sports: chi2={chi2:.4f}, p={p_chi2:.4e}"
     )
 
-    # ── Agreement by length bucket ────────────────────────────────────────────
     length_df = agreement_by_length(df, boot_cfg)
     results["agreement_by_length"] = length_df.to_dict(orient="records")
     logger.info(f"Agreement by length:\n{length_df.to_string(index=False)}")
 
-    # ── Confusion matrix figures ──────────────────────────────────────────────
     for cat in ["Beauty", "Sports"]:
         sub = df[df["category"] == cat]
         plot_confusion(sub["star_label"], sub["vader_label"], cat, figures_dir)
 
     plot_agreement_by_length(length_df, figures_dir)
 
-    # ── Mismatch mining ───────────────────────────────────────────────────────
     mismatch_counts = {}
     for cat in ["Beauty", "Sports"]:
         sub = df[df["category"] == cat]
@@ -323,7 +274,6 @@ def main():
         mismatch_counts[cat] = {"high_star_low_vader": hi_lo, "low_star_high_vader": lo_hi}
     results["mismatch_counts"] = mismatch_counts
 
-    # ── Save stats ────────────────────────────────────────────────────────────
     with open(stats_dir / "rq3.json", "w") as f:
         json.dump(results, f, indent=2)
 
@@ -340,7 +290,6 @@ def main():
     length_df.to_csv(tables_dir / "rq3_agreement_by_length.csv", index=False)
     logger.info(f"Stats saved → {stats_dir / 'rq3.json'}")
 
-    # ── Console summary ───────────────────────────────────────────────────────
     print("\n=== RQ3 Results ===")
     print(f"\nSpearman rho (overall): {spearman_overall['rho']:.4f}  "
           f"p={spearman_overall['p']:.4e}  "

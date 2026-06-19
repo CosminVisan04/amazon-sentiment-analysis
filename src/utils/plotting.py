@@ -1,8 +1,3 @@
-"""
-Consistent plot style for all figures.
-Saves every figure as both PDF (vector, for LaTeX) and PNG.
-Colour-blind-safe palette (Wong 2011).
-"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,29 +16,29 @@ matplotlib.rcParams.update({
     "figure.dpi": 150,
     "savefig.dpi": 300,
     "savefig.bbox": "tight",
-    "pdf.fonttype": 42,   # embed fonts as Type 42 (TrueType) — required by ACM
+    "pdf.fonttype": 42,
     "ps.fonttype": 42,
 })
 
-# Wong (2011) colour-blind-safe palette
 PALETTE = {
-    "Beauty": "#0072B2",   # blue
-    "Sports": "#E69F00",   # orange/amber
-    "positive": "#009E73", # green
-    "negative": "#D55E00", # vermillion
-    "neutral":  "#CC79A7", # pink
-    "accent":   "#56B4E9", # sky blue
+    "Beauty": "#0072B2",
+    "Sports": "#E69F00",
+    "positive": "#009E73",
+    "negative": "#D55E00",
+    "neutral":  "#CC79A7",
+    "accent":   "#56B4E9",
 }
 
 CATEGORY_COLORS = [PALETTE["Beauty"], PALETTE["Sports"]]
 
 
+# applies the shared seaborn theme
 def set_style():
     sns.set_theme(style="whitegrid", palette=list(PALETTE.values()))
 
 
+# saves a figure as pdf and png
 def save_figure(fig: plt.Figure, figures_dir: str | Path, stem: str) -> None:
-    """Save fig as <stem>.pdf and <stem>.png inside figures_dir."""
     out = Path(figures_dir)
     out.mkdir(parents=True, exist_ok=True)
     fig.savefig(out / f"{stem}.pdf")
@@ -51,5 +46,6 @@ def save_figure(fig: plt.Figure, figures_dir: str | Path, stem: str) -> None:
     plt.close(fig)
 
 
+# returns the category-to-colour mapping
 def category_palette() -> dict[str, str]:
     return {"Beauty": PALETTE["Beauty"], "Sports": PALETTE["Sports"]}

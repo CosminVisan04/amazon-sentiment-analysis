@@ -1,31 +1,3 @@
-"""
-Phase 7 — RQ4: What words are most distinctive of highly positive vs highly
-negative reviews in each category?
-
-Primary method  : Weighted log-odds ratio with informative Dirichlet prior
-                  (Monroe, Colaresi & Quinn 2008, "Fightin' Words").
-Secondary method: TF-IDF top terms per group (descriptive cross-check).
-
-Comparisons
------------
-1. Within Beauty  : positive (4-5 ★) vs negative (1-2 ★) reviews
-2. Within Sports  : positive (4-5 ★) vs negative (1-2 ★) reviews
-3. Across categories : Beauty vs Sports (all reviews) — "review culture" vocabulary
-
-Note: positive/negative defined by STAR RATING, not VADER, keeping RQ4
-independent of the tool being audited in RQ3. This is an explicit modelling choice.
-
-Figures
--------
-outputs/figures/rq4_words_beauty.{pdf,png}
-outputs/figures/rq4_words_sports.{pdf,png}
-outputs/figures/rq4_words_crosscat.{pdf,png}
-
-Outputs
--------
-outputs/tables/rq4_words_{beauty,sports,crosscat}.{csv,tex}
-outputs/qualitative/tfidf_{beauty,sports,crosscat}.csv
-"""
 import json
 import logging
 import sys
@@ -44,19 +16,13 @@ from utils.plotting import set_style, save_figure, PALETTE
 setup_logging()
 logger = logging.getLogger("amazon_sentiment.07_rq4")
 
-# Keep negation words — they flip sentiment and matter for distinctive-word
-# analysis (e.g. "not good" should not lose "not" to stopword removal).
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
 NEGATION_SAFE_STOP_WORDS = list(ENGLISH_STOP_WORDS - {"no", "nor", "not"})
-# Keeps contractions ("don't", "wasn't") as single tokens instead of
-# splitting on the apostrophe, which otherwise strands a bare "t"/"s" token
-# that min_df then discards — silently deleting the negation.
 NEGATION_TOKEN_PATTERN = r"(?u)\b[a-zA-Z]+(?:'[a-zA-Z]+)?\b"
 
 
-# ── Vectoriser helpers ────────────────────────────────────────────────────────
-
+# builds a count vectorizer with negation preserved
 def _build_vectorizer(cfg: dict, texts: list[str]):
     from sklearn.feature_extraction.text import CountVectorizer
     vec = CountVectorizer(
@@ -71,6 +37,7 @@ def _build_vectorizer(cfg: dict, texts: list[str]):
     return vec
 
 
+# converts a vectorized corpus to a word counter
 def _texts_to_counter(vec, texts: list[str]) -> Counter:
     X = vec.transform(texts)
     vocab = vec.get_feature_names_out()
@@ -78,6 +45,7 @@ def _texts_to_counter(vec, texts: list[str]) -> Counter:
     return Counter(dict(zip(vocab, counts)))
 
 
+# top tf-idf terms per group as a cross-check
 def _tfidf_top(texts_i: list[str], texts_j: list[str], label_i: str, label_j: str, cfg: dict, n: int) -> pd.DataFrame:
     from sklearn.feature_extraction.text import TfidfVectorizer
     tfidf = TfidfVectorizer(
@@ -107,8 +75,7 @@ def _tfidf_top(texts_i: list[str], texts_j: list[str], label_i: str, label_j: st
     return pd.DataFrame(rows)
 
 
-# ── Fighting words pipeline ───────────────────────────────────────────────────
-
+# runs one fighting words comparison and saves outputs
 def run_comparison(
     texts_i: list[str],
     texts_j: list[str],
@@ -124,7 +91,6 @@ def run_comparison(
         f"[{comparison_name}] {label_i} ({len(texts_i):,}) vs {label_j} ({len(texts_j):,})"
     )
 
-    # Fit on combined corpus
     all_texts = texts_i + texts_j
     vec = _build_vectorizer(cfg, all_texts)
 
@@ -145,18 +111,15 @@ def run_comparison(
     _save_words_latex(combined, label_i, label_j, comparison_name, n_top, tables_dir)
     logger.info(f"  Saved rq4_words_{comparison_name}.csv")
 
-    # TF-IDF secondary
     tfidf_df = _tfidf_top(texts_i, texts_j, label_i, label_j, cfg, n_top)
     tfidf_df.to_csv(qual_dir / f"tfidf_{comparison_name}.csv", index=False)
 
-    # Figure
     _plot_diverging(z_df, label_i, label_j, comparison_name, n_top, figures_dir)
 
     return combined
 
 
-# ── LaTeX table ───────────────────────────────────────────────────────────────
-
+# renders the distinctive words table as latex
 def _save_words_latex(df: pd.DataFrame, label_i: str, label_j: str,
                       name: str, n: int, tables_dir: Path):
     top_i = df[df["distinctive_of"] == label_i][["word", "z"]].head(n)
@@ -165,7 +128,7 @@ def _save_words_latex(df: pd.DataFrame, label_i: str, label_j: str,
     lines = [
         r"\begin{table}[h]",
         r"\centering",
-        r"\caption{RQ4 — top " + str(n) + r" most distinctive words (log-odds z-score). "
+        r"\caption{RQ4 - top " + str(n) + r" most distinctive words (log-odds z-score). "
         r"Comparison: " + label_i.replace("&", r"\&") + r" vs " + label_j.replace("&", r"\&") + r".}",
         r"\label{tab:rq4_" + name + r"}",
         r"\begin{tabular}{lr|lr}",
@@ -181,8 +144,7 @@ def _save_words_latex(df: pd.DataFrame, label_i: str, label_j: str,
     (tables_dir / f"rq4_words_{name}.tex").write_text("\n".join(lines), encoding="utf-8")
 
 
-# ── Diverging bar chart ───────────────────────────────────────────────────────
-
+# plots a diverging bar chart of word z-scores
 def _plot_diverging(z_df: pd.DataFrame, label_i: str, label_j: str,
                     name: str, n: int, figures_dir: Path):
     import matplotlib.pyplot as plt
@@ -191,7 +153,6 @@ def _plot_diverging(z_df: pd.DataFrame, label_i: str, label_j: str,
     top_i = z_df.head(n)[["word", "z"]].copy()
     top_j = z_df.tail(n)[["word", "z"]].copy().iloc[::-1]
 
-    # Combine: negatives on left (j side), positives on right (i side)
     plot_df = pd.concat([
         top_j.assign(side="j"),
         top_i.assign(side="i"),
@@ -220,8 +181,7 @@ def _plot_diverging(z_df: pd.DataFrame, label_i: str, label_j: str,
     logger.info(f"  Saved rq4_words_{name}")
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
+# runs phase 7 end to end
 def main():
     cfg = load_config()
 
@@ -235,7 +195,6 @@ def main():
     df = load_parquet("data/sample_scored.parquet")
     logger.info(f"Loaded {len(df):,} rows")
 
-    # ── Comparison 1: Within Beauty, positive vs negative ────────────────────
     beauty = df[df["category"] == "Beauty"]
     run_comparison(
         texts_i=beauty[beauty["star_label"] == "positive"]["review_text"].tolist(),
@@ -249,7 +208,6 @@ def main():
         figures_dir=figures_dir,
     )
 
-    # ── Comparison 2: Within Sports, positive vs negative ────────────────────
     sports = df[df["category"] == "Sports"]
     run_comparison(
         texts_i=sports[sports["star_label"] == "positive"]["review_text"].tolist(),
@@ -263,7 +221,6 @@ def main():
         figures_dir=figures_dir,
     )
 
-    # ── Comparison 3: Beauty vs Sports (all reviews, review culture) ──────────
     run_comparison(
         texts_i=beauty["review_text"].tolist(),
         texts_j=sports["review_text"].tolist(),
@@ -276,7 +233,6 @@ def main():
         figures_dir=figures_dir,
     )
 
-    # ── Console summary ───────────────────────────────────────────────────────
     print("\n=== RQ4 Results ===")
     for name, label_i, label_j in [
         ("beauty",   "Positive (4-5★)", "Negative (1-2★)"),

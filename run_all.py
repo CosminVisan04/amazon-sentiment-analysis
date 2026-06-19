@@ -1,9 +1,3 @@
-"""
-run_all.py — end-to-end pipeline runner.
-Runs all phases in order; each phase is cache-aware and skips if outputs exist.
-Usage: python run_all.py
-       python run_all.py --force   # ignore all caches
-"""
 import argparse
 import subprocess
 import sys
@@ -22,10 +16,11 @@ PHASES = [
 ROOT = Path(__file__).parent
 
 
+# runs one phase script as a subprocess
 def run_phase(script: str, force: bool):
     path = ROOT / script
     if not path.exists():
-        print(f"[SKIP] {script} — not yet implemented")
+        print(f"[SKIP] {script} - not yet implemented")
         return
     env_args = ["--force"] if force else []
     result = subprocess.run(
@@ -37,6 +32,7 @@ def run_phase(script: str, force: bool):
         sys.exit(result.returncode)
 
 
+# runs every phase in order
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="Re-run all phases ignoring cache")

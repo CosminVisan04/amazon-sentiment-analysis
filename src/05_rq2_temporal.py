@@ -1,25 +1,3 @@
-"""
-Phase 5 — RQ2: How does average review sentiment in each category change over
-2015-2023, and do the two categories trend differently?
-
-Tests
------
-- Per-category Mann-Kendall monotonic trend test + Sen's slope
-- Per-category OLS: compound ~ year (review-level)
-- Interaction OLS: compound ~ year * category (the analytically key test)
-- Per-year bootstrap 95% CI on mean compound
-- Holm-Bonferroni correction across per-year pairwise comparisons
-
-Figures
--------
-outputs/figures/rq2_trend.{pdf,png}
-
-Outputs
--------
-outputs/stats/rq2.json
-outputs/stats/rq2.csv
-outputs/tables/rq2_yearly_means.{csv,tex}
-"""
 import json
 import logging
 import sys
@@ -39,8 +17,7 @@ setup_logging()
 logger = logging.getLogger("amazon_sentiment.05_rq2")
 
 
-# ── Mann-Kendall + Sen's slope ────────────────────────────────────────────────
-
+# mann-kendall trend test plus sen's slope
 def mann_kendall(series: np.ndarray):
     import pymannkendall as mk
     result = mk.original_test(series)
@@ -53,8 +30,7 @@ def mann_kendall(series: np.ndarray):
     }
 
 
-# ── OLS helpers ───────────────────────────────────────────────────────────────
-
+# fits a simple ols model of y on x
 def ols_simple(df: pd.DataFrame, y: str, x: str):
     import statsmodels.formula.api as smf
     formula = f"{y} ~ {x}"
@@ -71,12 +47,8 @@ def ols_simple(df: pd.DataFrame, y: str, x: str):
     }
 
 
+# fits the year by category interaction ols model
 def ols_interaction(df: pd.DataFrame):
-    """
-    compound ~ year * C(category)
-    The interaction term year:C(category)[T.Sports] tests whether the
-    temporal trend differs between Beauty and Sports.
-    """
     import statsmodels.formula.api as smf
     model = smf.ols("vader_compound ~ year * C(category)", data=df).fit()
 
@@ -92,8 +64,7 @@ def ols_interaction(df: pd.DataFrame):
     return pd.DataFrame(rows), float(model.rsquared)
 
 
-# ── Figure ────────────────────────────────────────────────────────────────────
-
+# plots mean compound trend by year and category
 def plot_trend(yearly: pd.DataFrame, figures_dir: Path):
     import matplotlib.pyplot as plt
 
@@ -118,8 +89,7 @@ def plot_trend(yearly: pd.DataFrame, figures_dir: Path):
     logger.info("Saved rq2_trend")
 
 
-# ── LaTeX table ───────────────────────────────────────────────────────────────
-
+# renders the yearly means table as latex
 def yearly_to_latex(df: pd.DataFrame) -> str:
     lines = [
         r"\begin{table}[h]",
@@ -140,8 +110,7 @@ def yearly_to_latex(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
+# runs phase 5 end to end
 def main():
     cfg = load_config()
 
@@ -156,7 +125,6 @@ def main():
 
     boot_cfg = cfg["bootstrap"]
 
-    # ── Per (category × year) means with bootstrap CI ─────────────────────────
     yearly_rows = []
     for cat in ["Beauty", "Sports"]:
         for yr in sorted(df["year"].unique()):
@@ -173,7 +141,6 @@ def main():
     yearly = pd.DataFrame(yearly_rows)
     logger.info(f"Yearly means computed for {len(yearly)} cells")
 
-    # ── Mann-Kendall per category ─────────────────────────────────────────────
     mk_results = {}
     for cat in ["Beauty", "Sports"]:
         series = yearly[yearly["category"] == cat].sort_values("year")["mean_compound"].values
@@ -184,7 +151,6 @@ def main():
             f"tau={r['tau']:.4f}, Sen's slope={r['sens_slope']:.6f}/yr"
         )
 
-    # ── OLS per category (review-level) ──────────────────────────────────────
     ols_results = {}
     for cat in ["Beauty", "Sports"]:
         sub = df[df["category"] == cat].copy()
@@ -195,12 +161,10 @@ def main():
             f"95% CI=[{r['ci_95'][0]:.6f}, {r['ci_95'][1]:.6f}], R²={r['r_squared']:.5f}"
         )
 
-    # ── Interaction OLS (the key test) ────────────────────────────────────────
     interaction_df, r2_int = ols_interaction(df)
     logger.info(f"Interaction OLS R²={r2_int:.5f}")
     logger.info(f"\n{interaction_df.to_string(index=False)}")
 
-    # Flag the interaction term
     interaction_term = interaction_df[interaction_df["term"].str.contains("year.*Sports|Sports.*year", regex=True)]
     if not interaction_term.empty:
         row = interaction_term.iloc[0]
@@ -210,7 +174,6 @@ def main():
             f"p={row['p']:.4e} → {sig}"
         )
 
-    # ── Per-year pairwise Mann-Whitney (Beauty vs Sports each year) ───────────
     pw_rows = []
     for yr in sorted(df["year"].unique()):
         b = df[(df["category"] == "Beauty") & (df["year"] == yr)]["vader_compound"].values
@@ -223,7 +186,6 @@ def main():
     pw_df["significant_adj"] = pw_df["p_adj"] < 0.05
     logger.info(f"Per-year pairwise tests (Holm-corrected):\n{pw_df.to_string(index=False)}")
 
-    # ── Save ──────────────────────────────────────────────────────────────────
     results = {
         "rq": "RQ2",
         "question": "How does average review sentiment in each category change over 2015-2023, and do the two categories trend differently?",
@@ -244,7 +206,6 @@ def main():
     interaction_df.to_csv(stats_dir / "rq2_interaction_ols.csv", index=False)
     pw_df.to_csv(stats_dir / "rq2_pairwise.csv", index=False)
 
-    # Summary stats CSV
     stat_rows = []
     for cat in ["Beauty", "Sports"]:
         r = mk_results[cat]
@@ -259,10 +220,8 @@ def main():
     pd.DataFrame(stat_rows).to_csv(stats_dir / "rq2.csv", index=False)
     logger.info(f"Stats saved → {stats_dir / 'rq2.json'}")
 
-    # ── Plot ──────────────────────────────────────────────────────────────────
     plot_trend(yearly, figures_dir)
 
-    # ── Console summary ───────────────────────────────────────────────────────
     print("\n=== RQ2 Results ===")
     print("\nYearly means:")
     print(yearly.round(4).to_string(index=False))

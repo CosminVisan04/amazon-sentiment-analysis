@@ -1,26 +1,3 @@
-"""
-Phase 4 — RQ1: How does the distribution of sentiment scores differ between
-Beauty and Sports & Outdoors reviews?
-
-Tests
------
-- Mann-Whitney U (two-sided) for location difference
-- Kolmogorov-Smirnov for distribution shape difference
-Effect sizes: Cliff's delta, rank-biserial r
-Bootstrap 95% CI for difference in means and medians (fixed seed)
-
-Figures
--------
-outputs/figures/rq1_kde.{pdf,png}
-outputs/figures/rq1_violin.{pdf,png}
-outputs/figures/rq1_ecdf.{pdf,png}
-
-Outputs
--------
-outputs/stats/rq1.json
-outputs/stats/rq1.csv
-outputs/tables/rq1_descriptives.{csv,tex}
-"""
 import json
 import logging
 import sys
@@ -42,8 +19,7 @@ setup_logging()
 logger = logging.getLogger("amazon_sentiment.04_rq1")
 
 
-# ── Descriptive statistics ────────────────────────────────────────────────────
-
+# computes descriptive statistics for one category
 def descriptives(arr: np.ndarray, label_counts: dict) -> dict:
     total = len(arr)
     return {
@@ -58,8 +34,7 @@ def descriptives(arr: np.ndarray, label_counts: dict) -> dict:
     }
 
 
-# ── Figures ───────────────────────────────────────────────────────────────────
-
+# plots overlaid kde of compound scores
 def plot_kde(beauty: np.ndarray, sports: np.ndarray, figures_dir: Path):
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -83,6 +58,7 @@ def plot_kde(beauty: np.ndarray, sports: np.ndarray, figures_dir: Path):
     logger.info("Saved rq1_kde")
 
 
+# plots violin and box of compound scores
 def plot_violin(df: pd.DataFrame, figures_dir: Path):
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -107,6 +83,7 @@ def plot_violin(df: pd.DataFrame, figures_dir: Path):
     logger.info("Saved rq1_violin")
 
 
+# plots empirical cdf of compound scores
 def plot_ecdf(beauty: np.ndarray, sports: np.ndarray, figures_dir: Path):
     import matplotlib.pyplot as plt
 
@@ -133,8 +110,7 @@ def plot_ecdf(beauty: np.ndarray, sports: np.ndarray, figures_dir: Path):
     logger.info("Saved rq1_ecdf")
 
 
-# ── LaTeX helpers ─────────────────────────────────────────────────────────────
-
+# renders the descriptives table as latex
 def descriptives_to_latex(desc_df: pd.DataFrame) -> str:
     lines = [
         r"\begin{table}[h]",
@@ -156,8 +132,7 @@ def descriptives_to_latex(desc_df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
+# runs phase 4 end to end
 def main():
     cfg = load_config()
 
@@ -178,26 +153,21 @@ def main():
 
     boot_cfg = cfg["bootstrap"]
 
-    # ── Descriptives ──────────────────────────────────────────────────────────
     desc = {
         "Beauty": descriptives(beauty, b_labels),
         "Sports": descriptives(sports, s_labels),
     }
 
-    # ── Mann-Whitney U ────────────────────────────────────────────────────────
     u_stat, p_mw = sp_stats.mannwhitneyu(beauty, sports, alternative="two-sided")
     rbr = rank_biserial_r(u_stat, len(beauty), len(sports))
     logger.info(f"Mann-Whitney U={u_stat:.1f}, p={p_mw:.4e}, rank-biserial r={rbr:.4f}")
 
-    # ── Kolmogorov-Smirnov ────────────────────────────────────────────────────
     ks_stat, p_ks = sp_stats.ks_2samp(beauty, sports)
     logger.info(f"KS stat={ks_stat:.4f}, p={p_ks:.4e}")
 
-    # ── Cliff's delta (derived from U — mathematically identical to pairwise) ─
     cd = cliffs_delta_from_u(u_stat, len(beauty), len(sports))
     logger.info(f"Cliff's delta={cd:.4f}")
 
-    # ── Bootstrap CIs ─────────────────────────────────────────────────────────
     mean_ci_b = bootstrap_ci(beauty, np.mean, boot_cfg["n_iterations"], boot_cfg["ci_level"], boot_cfg["seed"])
     mean_ci_s = bootstrap_ci(sports, np.mean, boot_cfg["n_iterations"], boot_cfg["ci_level"], boot_cfg["seed"])
     med_ci_b  = bootstrap_ci(beauty, np.median, boot_cfg["n_iterations"], boot_cfg["ci_level"], boot_cfg["seed"])
@@ -205,7 +175,6 @@ def main():
     diff_mean_ci = bootstrap_diff_ci(beauty, sports, np.mean, boot_cfg["n_iterations"], boot_cfg["ci_level"], boot_cfg["seed"])
     diff_med_ci  = bootstrap_diff_ci(beauty, sports, np.median, boot_cfg["n_iterations"], boot_cfg["ci_level"], boot_cfg["seed"])
 
-    # ── Compile results ───────────────────────────────────────────────────────
     results = {
         "rq": "RQ1",
         "question": "How does the distribution of sentiment scores differ between Beauty and Sports & Outdoors reviews?",
@@ -240,18 +209,15 @@ def main():
     pd.DataFrame(stats_rows).to_csv(stats_dir / "rq1.csv", index=False)
     logger.info(f"Stats saved → {stats_dir / 'rq1.json'}")
 
-    # ── Descriptives table ────────────────────────────────────────────────────
     desc_rows = [{"category": cat, **vals} for cat, vals in desc.items()]
     desc_df = pd.DataFrame(desc_rows)
     desc_df.to_csv(tables_dir / "rq1_descriptives.csv", index=False)
     (tables_dir / "rq1_descriptives.tex").write_text(descriptives_to_latex(desc_df), encoding="utf-8")
 
-    # ── Figures ───────────────────────────────────────────────────────────────
     plot_kde(beauty, sports, figures_dir)
     plot_violin(df, figures_dir)
     plot_ecdf(beauty, sports, figures_dir)
 
-    # ── Console summary ───────────────────────────────────────────────────────
     print("\n=== RQ1 Results ===")
     print(f"\nDescriptives:")
     print(desc_df.round(4).to_string(index=False))
@@ -260,12 +226,11 @@ def main():
     print(f"Kolmogorov-Smirnov D={ks_stat:.4f}, p={p_ks:.4e}")
     print(f"Cliff's delta={cd:.4f}")
 
-    print(f"\nBootstrap 95% CI — Beauty mean: [{mean_ci_b[0]:.4f}, {mean_ci_b[1]:.4f}]")
-    print(f"Bootstrap 95% CI — Sports mean: [{mean_ci_s[0]:.4f}, {mean_ci_s[1]:.4f}]")
-    print(f"Bootstrap 95% CI — diff (Beauty−Sports) mean: [{diff_mean_ci[0]:.4f}, {diff_mean_ci[1]:.4f}]")
-    print(f"Bootstrap 95% CI — diff (Beauty−Sports) median: [{diff_med_ci[0]:.4f}, {diff_med_ci[1]:.4f}]")
+    print(f"\nBootstrap 95% CI - Beauty mean: [{mean_ci_b[0]:.4f}, {mean_ci_b[1]:.4f}]")
+    print(f"Bootstrap 95% CI - Sports mean: [{mean_ci_s[0]:.4f}, {mean_ci_s[1]:.4f}]")
+    print(f"Bootstrap 95% CI - diff (Beauty−Sports) mean: [{diff_mean_ci[0]:.4f}, {diff_mean_ci[1]:.4f}]")
+    print(f"Bootstrap 95% CI - diff (Beauty−Sports) median: [{diff_med_ci[0]:.4f}, {diff_med_ci[1]:.4f}]")
 
-    # Plain-language answer for FINDINGS.md
     sig = "statistically significant" if p_mw < 0.05 else "not statistically significant"
     print(f"\nAnswer: The difference in compound scores between Beauty and Sports is {sig} "
           f"(Mann-Whitney p={p_mw:.2e}, Cliff's delta={cd:.3f}).")

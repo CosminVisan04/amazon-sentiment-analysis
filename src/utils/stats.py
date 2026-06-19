@@ -1,15 +1,10 @@
-"""
-Reusable statistical helpers: bootstrap CI, Cliff's delta, Holm-Bonferroni correction.
-All random operations accept a seed for reproducibility.
-"""
 from __future__ import annotations
 
 import numpy as np
 from scipy import stats as sp_stats
 
 
-# ── Bootstrap CI ─────────────────────────────────────────────────────────────
-
+# percentile bootstrap ci for a statistic
 def bootstrap_ci(
     data: np.ndarray,
     stat_fn=np.mean,
@@ -17,7 +12,6 @@ def bootstrap_ci(
     ci: float = 0.95,
     seed: int = 42,
 ) -> tuple[float, float]:
-    """Return (lower, upper) percentile bootstrap CI for stat_fn applied to data."""
     rng = np.random.default_rng(seed)
     boot_stats = np.array([
         stat_fn(rng.choice(data, size=len(data), replace=True))
@@ -27,6 +21,7 @@ def bootstrap_ci(
     return float(np.quantile(boot_stats, alpha)), float(np.quantile(boot_stats, 1 - alpha))
 
 
+# bootstrap ci for the difference between two groups
 def bootstrap_diff_ci(
     a: np.ndarray,
     b: np.ndarray,
@@ -35,7 +30,6 @@ def bootstrap_diff_ci(
     ci: float = 0.95,
     seed: int = 42,
 ) -> tuple[float, float]:
-    """Bootstrap CI for stat_fn(a) - stat_fn(b)."""
     rng = np.random.default_rng(seed)
     diffs = np.array([
         stat_fn(rng.choice(a, size=len(a), replace=True))
@@ -46,14 +40,8 @@ def bootstrap_diff_ci(
     return float(np.quantile(diffs, alpha)), float(np.quantile(diffs, 1 - alpha))
 
 
-# ── Effect sizes ─────────────────────────────────────────────────────────────
-
+# cliff's delta effect size between two samples
 def cliffs_delta(a: np.ndarray, b: np.ndarray, chunk_size: int = 5000) -> float:
-    """
-    Cliff's delta: P(a > b) - P(b > a).
-    Range [-1, 1]; |d| < 0.147 negligible, < 0.33 small, < 0.474 medium, else large.
-    Uses chunked computation to avoid allocating an n1×n2 matrix for large arrays.
-    """
     a, b = np.asarray(a), np.asarray(b)
     m, n = len(a), len(b)
     dominance = 0
@@ -63,27 +51,18 @@ def cliffs_delta(a: np.ndarray, b: np.ndarray, chunk_size: int = 5000) -> float:
     return float(dominance / (m * n))
 
 
+# cliff's delta derived from a mann-whitney u statistic
 def cliffs_delta_from_u(u_stat: float, n1: int, n2: int) -> float:
-    """
-    Derive Cliff's delta directly from Mann-Whitney U.
-    Mathematically equivalent to the pairwise formula: d = 2U/(n1*n2) - 1.
-    Use this when n1*n2 is too large for the pairwise approach.
-    """
     return float(2 * u_stat / (n1 * n2) - 1)
 
 
+# rank-biserial correlation from a mann-whitney u statistic
 def rank_biserial_r(u_stat: float, n1: int, n2: int) -> float:
-    """Convert Mann-Whitney U to rank-biserial correlation r = 2U/(n1*n2) - 1."""
     return float(2 * u_stat / (n1 * n2) - 1)
 
 
-# ── Holm-Bonferroni correction ───────────────────────────────────────────────
-
+# holm-bonferroni adjusted p-values
 def holm_bonferroni(p_values: list[float]) -> list[float]:
-    """
-    Return Holm-Bonferroni adjusted p-values (same order as input).
-    Equivalent to scipy.stats.false_discovery_control with 'holm' method, but explicit.
-    """
     n = len(p_values)
     indexed = sorted(enumerate(p_values), key=lambda x: x[1])
     adjusted = [0.0] * n
@@ -95,10 +74,8 @@ def holm_bonferroni(p_values: list[float]) -> list[float]:
     return adjusted
 
 
-# ── Spearman CI (Fisher z on rank correlation) ───────────────────────────────
-
+# fisher z confidence interval for spearman rho
 def spearman_ci(rho: float, n: int, ci: float = 0.95) -> tuple[float, float]:
-    """Approximate CI for Spearman rho using Fisher z-transform."""
     z = np.arctanh(rho)
     se = 1 / np.sqrt(n - 3)
     z_crit = sp_stats.norm.ppf(1 - (1 - ci) / 2)
@@ -107,8 +84,7 @@ def spearman_ci(rho: float, n: int, ci: float = 0.95) -> tuple[float, float]:
     return float(lo), float(hi)
 
 
-# ── Cohen's kappa ─────────────────────────────────────────────────────────────
-
+# weighted cohen's kappa between two label sets
 def cohens_kappa_weighted(y_true, y_pred, weights: str = "quadratic") -> float:
     from sklearn.metrics import cohen_kappa_score
     return float(cohen_kappa_score(y_true, y_pred, weights=weights))

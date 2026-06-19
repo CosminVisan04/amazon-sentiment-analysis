@@ -16,15 +16,15 @@ feedback on the first pass. All numbers below are from the corrected, re-run pip
    `review_text` alone. The old global dedup could delete a review just because
    identical text existed in a *different* category or year, silently damaging the
    stratified balance. Effect: only 3,562 duplicates dropped (1.8%) vs. 6,100 (3.1%)
-   originally — about 2,538 reviews were being wrongly discarded before.
+   originally - about 2,538 reviews were being wrongly discarded before.
 2. **HTML/markup cleaning** (`clean_text()`) strips `<tags>`, unescapes HTML entities,
    and removes `[[ASIN:...]]` markers before any other processing. This removes the
    `br` artefact that previously polluted the RQ4 cross-category word list (confirmed
    gone from `rq4_words_crosscat.csv` below).
 3. **Apostrophe normalisation.** The corpus mixes mojibake (`â`), curly (`’`/`‘`), and
    straight (`'`) apostrophes for the *same* contraction across different reviews. A
-   tokenizer that only recognises one form splits the rest — `doesn't` → `doesn` + a
-   stray `t` — destroying the negation signal. All three forms are now normalised to
+   tokenizer that only recognises one form splits the rest - `doesn't` → `doesn` + a
+   stray `t` - destroying the negation signal. All three forms are now normalised to
    a straight `'` before tokenising, and the RQ4 vectorizer keeps contractions intact
    and no longer strips `no`/`nor`/`not` as stopwords. Concretely: the Beauty negative
    word list previously showed broken fragments `didn work`, `doesn work`; it now
@@ -55,7 +55,7 @@ pass per category over the full Amazon Reviews 2023 dataset (McAuley Lab / Huggi
 
 ---
 
-## RQ1 — Sentiment Score Distribution by Category
+## RQ1 - Sentiment Score Distribution by Category
 
 **Question:** How does the distribution of sentiment scores differ between Beauty
 and Sports & Outdoors reviews?
@@ -68,7 +68,7 @@ Cliff's delta (effect size), bootstrap 95% CI for difference in means and median
 Both categories are overwhelmingly positive and nearly identical in their sentiment
 distributions. The difference is statistically detectable but practically negligible:
 the bootstrap CI for the *mean* difference straddles zero, while the CI for the
-*median* difference does not — Beauty's median is reliably a little higher, but the
+*median* difference does not - Beauty's median is reliably a little higher, but the
 two distributions otherwise overlap almost completely.
 
 ### Key numbers
@@ -87,8 +87,8 @@ two distributions otherwise overlap almost completely.
 - Mann-Whitney U = 4,535,211,928.5, p = 3.67 × 10⁻⁴, rank-biserial r = 0.0095 (negligible)
 - Kolmogorov-Smirnov D = 0.0159, p = 8.72 × 10⁻¹¹
 - Cliff's delta = 0.0095 (|d| < 0.147 = negligible by convention)
-- Bootstrap 95% CI, difference in means (Beauty − Sports): [−0.0065, 0.0023] — **straddles zero**
-- Bootstrap 95% CI, difference in medians (Beauty − Sports): [0.0058, 0.0135] — **excludes zero**
+- Bootstrap 95% CI, difference in means (Beauty − Sports): [−0.0065, 0.0023] - **straddles zero**
+- Bootstrap 95% CI, difference in medians (Beauty − Sports): [0.0058, 0.0135] - **excludes zero**
 
 **Figures:** `outputs/figures/rq1_kde.{pdf,png}`, `rq1_violin.{pdf,png}`, `rq1_ecdf.{pdf,png}`
 **Table:** `outputs/tables/rq1_descriptives.{csv,tex}`
@@ -97,7 +97,7 @@ two distributions otherwise overlap almost completely.
 ### Notes for the paper
 - **Main finding:** Despite being fundamentally different product domains, the sentiment
   distributions are functionally identical (Cliff's delta = 0.0095). This is the answer
-  to RQ1 — and it is interesting precisely because of the near-null result.
+  to RQ1 - and it is interesting precisely because of the near-null result.
 - **Mean vs. median nuance:** Report both CIs. The median difference is the more
   reliable signal here (CI excludes zero); the mean difference is not distinguishable
   from zero at this sample size. This is a more honest statement than picking one
@@ -113,7 +113,7 @@ two distributions otherwise overlap almost completely.
 
 ---
 
-## RQ2 — Temporal Trends (2015–2023)
+## RQ2 - Temporal Trends (2015–2023)
 
 **Question:** How does average review sentiment in each category change over 2015–2023,
 and do the two categories trend differently?
@@ -125,11 +125,11 @@ Per-year pairwise Mann-Whitney U with Holm–Bonferroni correction.
 
 ### Answer
 Neither category shows a statistically significant monotonic trend over 2015–2023 by
-Mann-Kendall (which only has 9 annual points to work with). Review-level OLS — which
-pools all 189,587 individual reviews — finds a highly significant but practically tiny
+Mann-Kendall (which only has 9 annual points to work with). Review-level OLS - which
+pools all 189,587 individual reviews - finds a highly significant but practically tiny
 decline in both categories, **and this time the interaction term is also significant**
 (p = 0.014): Beauty's fitted slope is steeper than Sports'. This should *not* be read as
-a clean, steadily-widening gap, though — per-year pairwise tests find a significant
+a clean, steadily-widening gap, though - per-year pairwise tests find a significant
 category difference only in 2015–2016, with no later year reaching significance after
 Holm–Bonferroni correction. The interaction result is real but is driven by the early
 years, not by a year-on-year divergence that keeps growing. The dominant visual pattern
@@ -154,7 +154,7 @@ point in 2021 and Sports' low point in 2022, and partial recovery in 2023.
 - Interaction term `year:Sports`: coef = +0.00217, p = **0.0136** → **significant**,
   95% CI [0.00045, 0.00389] (excludes zero)
 - Beauty's slope is significantly steeper (more negative) than Sports'
-- Whole-model R² = 0.00063 — the effect is real but explains a tiny fraction of variance
+- Whole-model R² = 0.00063 - the effect is real but explains a tiny fraction of variance
 
 **Per-year pairwise (Holm-corrected):**
 - 2015: p_adj = 2.71 × 10⁻⁸ ✓ significant
@@ -179,22 +179,22 @@ point in 2021 and Sports' low point in 2022, and partial recovery in 2023.
   term was not significant (p = 0.162) and the categories looked statistically
   indistinguishable in trajectory. After fixing the dedup/cleaning issues, the same
   test on the corrected data finds a significant interaction (p = 0.014). State both
-  the result and the caveat below — don't headline this as a strong divergence.
+  the result and the caveat below - don't headline this as a strong divergence.
 - **Why this is a weak effect despite significance:** the interaction model explains
   only 0.063% of variance (R² = 0.00063), and the per-year pairwise tests find a
   significant gap only in 2015–2016. The most defensible statement is: *"Beauty's
   average sentiment declined modestly faster than Sports' over the full period, but
   this is driven by an early-years gap (2015–2016) rather than a trend that
-  progressively widens — from 2017 onward, the two categories are statistically
+  progressively widens - from 2017 onward, the two categories are statistically
   indistinguishable year-by-year."* Avoid claiming either a clean "convergence" or a
-  clean "divergence" — the evidence supports neither extreme.
+  clean "divergence" - the evidence supports neither extreme.
 - **Why Mann-Kendall and OLS disagree:** OLS operates on 189k individual reviews and
   is significant due to sample size, not effect size. Mann-Kendall on 9 annual means
-  is the appropriate test for monotonic trend in a time series — and it does not
+  is the appropriate test for monotonic trend in a time series - and it does not
   confirm a trend in either category. State both and explain the discrepancy.
 - **The 2019 peak / 2020–2022 dip** is the most interesting pattern, and it's now
   slightly asymmetric: both categories peak together in 2019, but Beauty bottoms out
-  in 2021 while Sports bottoms out in 2022 — a one-year lag between categories.
+  in 2021 while Sports bottoms out in 2022 - a one-year lag between categories.
   Supply chain disruptions, delayed shipping, and out-of-stock substitutions during
   COVID-19 may explain the dip; the one-year offset is contextual speculation worth
   one cautious sentence, not a strong claim.
@@ -203,7 +203,7 @@ point in 2021 and Sports' low point in 2022, and partial recovery in 2023.
 
 ---
 
-## RQ3 — Star Ratings vs VADER Agreement & VADER Validation
+## RQ3 - Star Ratings vs VADER Agreement & VADER Validation
 
 **Question:** How well do star ratings and VADER sentiment scores agree,
 and in which cases do they diverge?
@@ -215,24 +215,24 @@ Per-length-bucket accuracy with bootstrap 95% CI. Mismatch mining (rating 4–5 
 compound ≤ −0.5; rating 1–2 but compound ≥ 0.5).
 
 Star-rating-derived labels (`star_label`) are used throughout as **reference labels**,
-not as manually-annotated ground truth — "accuracy" below means agreement with this
+not as manually-annotated ground truth - "accuracy" below means agreement with this
 proxy, not objective correctness. This distinction matters because both signals come
 from the same reviewer at the same time and could share systematic biases.
 
 ### Answer
 VADER shows moderate agreement with star-rating-derived labels (ρ = 0.510,
-κ = 0.597, accuracy = 80.9%) — only about 3.9 percentage points above the
+κ = 0.597, accuracy = 80.9%) - only about 3.9 percentage points above the
 majority-class baseline (77.0%, "always predict positive"), because the class
 distribution is itself heavily skewed toward positive. VADER is strong on positive
-reviews (F1 = 0.90) but performs poorly on neutral reviews (F1 = 0.12) — it essentially
+reviews (F1 = 0.90) but performs poorly on neutral reviews (F1 = 0.12) - it essentially
 cannot reliably separate neutral from positive/negative. The Beauty-vs-Sports
 difference is small and not one-directional: exact-label accuracy is slightly higher
 for Sports (81.1% vs 80.6%), while weighted kappa and rank correlation are slightly
-higher for Beauty (κ = 0.604 vs 0.588; ρ = 0.528 vs 0.493) — the category difference
+higher for Beauty (κ = 0.604 vs 0.588; ρ = 0.528 vs 0.493) - the category difference
 is practically negligible even though the chi-square test is significant (an artefact
 of the large sample). Contrary to the standard assumption that VADER (designed for
 short social-media text) should struggle with short reviews, accuracy here **decreases**
-with review length — the longest reviews are the hardest, not the shortest. VADER is
+with review length - the longest reviews are the hardest, not the shortest. VADER is
 also systematically over-optimistic: low-star/high-VADER mismatches outnumber the
 reverse by roughly 3–4×.
 
@@ -253,7 +253,7 @@ reverse by roughly 3–4×.
 | Sports | 0.811 | 0.540 | 0.588 | 0.784 (+2.7pp) |
 
 - Chi-square (Beauty vs Sports agreement): χ² = 6.90, p = 0.0086 → significant,
-  but the underlying accuracy gap is < 0.5 percentage points — a large-N artefact,
+  but the underlying accuracy gap is < 0.5 percentage points - a large-N artefact,
   not a meaningful category effect.
 
 **Per-class performance (overall):**
@@ -285,22 +285,22 @@ reverse by roughly 3–4×.
 **Qualitative:** `outputs/qualitative/mismatches_Beauty.csv`,
                  `outputs/qualitative/mismatches_Sports.csv`
 
-### Notes for the paper — VADER limitations (F4/F5)
+### Notes for the paper - VADER limitations (F4/F5)
 - **Reference labels, not ground truth:** Make this explicit in the Methodology.
   Star ratings are themselves a noisy, single-dimension proxy for sentiment (e.g. a
   4★ review can contain harsh criticism of a minor flaw). Disagreement between VADER
   and stars is not automatically a VADER "error."
 - **Baseline-relative framing:** VADER's headline 80.9% accuracy sounds strong in
   isolation but is only ~3.9pp above trivially guessing the majority class. This
-  matters because the *useful* signal VADER adds is small in absolute terms — most of
+  matters because the *useful* signal VADER adds is small in absolute terms - most of
   its apparent accuracy comes from the corpus being mostly positive, not from VADER
   correctly resolving hard cases.
 - **The neutral class is where VADER actually fails:** F1 = 0.12 vs 0.90 for positive.
   This is a stronger and more precise version of "VADER struggles with subtlety" than
-  a single overall accuracy number conveys — lead with this in the Discussion.
+  a single overall accuracy number conveys - lead with this in the Discussion.
 - **The length finding challenges the canonical assumption** that VADER fails on short
   texts (designed for tweets). On Amazon reviews, accuracy *decreases* with length.
-  Short reviews ("love it!", "garbage") are unambiguous — VADER handles them well.
+  Short reviews ("love it!", "garbage") are unambiguous - VADER handles them well.
   Long reviews discuss multiple product aspects with qualified language and mixed
   sentiment that VADER's single compound score cannot capture.
 - **Asymmetric errors:** The 3–4× excess of low-star/high-VADER mismatches over
@@ -314,15 +314,15 @@ reverse by roughly 3–4×.
   compound scores for high-rated reviews and artificially boost the observed agreement.
   Acknowledge this as a limitation.
 - **κ = 0.597** falls in Landis & Koch's "moderate" band (0.41–0.60), just below the
-  substantial boundary. Frame as "moderate agreement" — don't round up to "substantial."
-- **Beauty vs Sports — do not claim one category agrees "better":** accuracy slightly
+  substantial boundary. Frame as "moderate agreement" - don't round up to "substantial."
+- **Beauty vs Sports - do not claim one category agrees "better":** accuracy slightly
   favours Sports, kappa and rank correlation slightly favour Beauty. State both metrics
   and conclude the category effect is small and not one-directional, rather than
   picking the metric that tells a cleaner story.
 
 ---
 
-## RQ4 — Distinctive Words
+## RQ4 - Distinctive Words
 
 **Question:** What words are most distinctive of highly positive vs highly negative
 reviews in each category?
@@ -345,22 +345,22 @@ Sports is functional and technical.
 
 ### Key words (top 10 per side by z-score)
 
-**Within Beauty — Positive vs Negative:**
+**Within Beauty - Positive vs Negative:**
 - Positive (4–5★): *great, love, works, perfect, easy, best, stars, nice, amazing, great product*
 - Negative (1–2★): *not, waste, disappointed, waste money, money, star, return, did not, not worth, not buy*
-  — note `doesn't work` and `didn't` now also appear intact in the full top-25 (see
+  - note `doesn't work` and `didn't` now also appear intact in the full top-25 (see
   `rq4_words_beauty.csv`), replacing the broken `didn work` / `doesn work` fragments
   from before the apostrophe fix.
 
-**Within Sports — Positive vs Negative:**
+**Within Sports - Positive vs Negative:**
 - Positive (4–5★): *great, love, easy, perfect, good, stars, nice, works, price, great product*
 - Negative (1–2★): *not, broke, disappointed, return, waste, poor, waste money, cheap, not worth, poor quality*
-  — `don't waste` and `don't buy` now appear intact (full list in `rq4_words_sports.csv`).
+  - `don't waste` and `don't buy` now appear intact (full list in `rq4_words_sports.csv`).
 
-**Cross-category — Beauty vs Sports:**
+**Cross-category - Beauty vs Sports:**
 - Beauty: *hair, skin, scent, smell, smells, brush, product, face, love, makeup*
 - Sports: *bike, fit, bag, comfortable, water, fits, ball, tent, camping, weight*
-  — the HTML `br` artefact present in the previous run's cross-category list is gone.
+  - the HTML `br` artefact present in the previous run's cross-category list is gone.
 
 **Figures:** `outputs/figures/rq4_words_beauty.{pdf,png}`,
             `rq4_words_sports.{pdf,png}`,
@@ -376,8 +376,8 @@ Sports is functional and technical.
   evidence that Amazon's review culture drives aggregate sentiment (RQ1 near-null
   result), not product domain. The category signal only emerges in negative reviews
   and in the cross-category comparison.
-- **Negation is now handled correctly — show the before/after as a methods point:**
-  the pre-correction Beauty negative list contained `didn work`, `doesn work` — broken
+- **Negation is now handled correctly - show the before/after as a methods point:**
+  the pre-correction Beauty negative list contained `didn work`, `doesn work` - broken
   fragments caused by inconsistent apostrophe encoding in the source data, *not* a
   genuine linguistic pattern. Normalising apostrophes before tokenising fixed this; the
   corrected list shows the intact, more interpretable forms `doesn't work`, `didn't`,
@@ -385,16 +385,16 @@ Sports is functional and technical.
   concrete illustration of why text-cleaning choices matter for word-level analysis.
 - **Sports durability narrative:** Negative Sports words (*broken, broke, garbage,
   useless*) tell a coherent story: physical products failing structurally. This is
-  domain vocabulary VADER's lexicon does not cover — connecting RQ4 back to RQ3.
+  domain vocabulary VADER's lexicon does not cover - connecting RQ4 back to RQ3.
 - **Beauty efficacy narrative:** Negative Beauty words (*waste, waste money, return,
   disappointed, not worth, not buy*) reflect efficacy disappointment and consumer
-  action (refunds/returns) rather than physical failure — a different failure mode
+  action (refunds/returns) rather than physical failure - a different failure mode
   than Sports.
 - **Cross-category novelty:** The sensory/emotional (Beauty) vs functional/technical
   (Sports) split is the strongest "review culture" evidence in the paper. Beauty
   reviewers use affective vocabulary (*scent, smell, skin, hair*); Sports reviewers
   use functional/spec vocabulary (*fit, comfortable, durable, weight, camping*). This
-  has implications for any downstream NLP model trained on pooled Amazon reviews —
+  has implications for any downstream NLP model trained on pooled Amazon reviews -
   domain transfer may require category-specific lexica.
 - **"stars" confound (see RQ3):** The word "stars" appearing in positive reviews
   suggests some reviewers copy their star rating into the text ("5 stars, great
@@ -402,7 +402,7 @@ Sports is functional and technical.
 
 ---
 
-## Summary table — all RQ answers
+## Summary table - all RQ answers
 
 | RQ | One-sentence answer | Key stat |
 |---|---|---|
@@ -418,23 +418,23 @@ Sports is functional and technical.
 
 1. **Near-identical aggregate distributions, but a small and significant
    differential trend (RQ1 + RQ2):** Aggregate sentiment level is largely
-   category-independent, but the *trajectory* over time is not quite — Beauty
+   category-independent, but the *trajectory* over time is not quite - Beauty
    declined modestly faster than Sports, concentrated in an early-years (2015–16)
    gap. A Web Science contribution: platform-level positivity dominates absolute
    sentiment, but category-specific dynamics still show up in finer-grained temporal
-   analysis. Avoid overstating this as a clean "divergence" story — it is a real but
+   analysis. Avoid overstating this as a clean "divergence" story - it is a real but
    small effect, not visible year-by-year after 2016.
 
 2. **Non-monotonic temporal pattern (RQ2):** The 2019 peak and 2020–22 dip is a
    system-level signal visible across both categories, with a one-year lag between
-   Beauty's trough (2021) and Sports' trough (2022) — consistent with an external
+   Beauty's trough (2021) and Sports' trough (2022) - consistent with an external
    shock (COVID-19 supply chain disruption) propagating slightly differently across
    product categories. Demonstrates that aggregate sentiment in UGC can serve as a
    proxy signal for real-world disruptions.
 
 3. **VADER length finding (RQ3):** Challenges the standard assumption about VADER's
    domain applicability. The failure mode on Amazon is not short text (as on Twitter)
-   but long, mixed-sentiment text — and even more strikingly, VADER's accuracy
+   but long, mixed-sentiment text - and even more strikingly, VADER's accuracy
    advantage over a trivial majority-class baseline is small (+3.9pp) and concentrated
    entirely in the positive class. This is a new, more precise empirical data point
    for the sentiment-analysis methods literature than a single accuracy number.

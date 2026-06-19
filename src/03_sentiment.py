@@ -1,24 +1,3 @@
-"""
-Phase 3 — Sentiment scoring with VADER.
-
-For each review:
-  - Score review_text with VADER → neg, neu, pos, compound
-  - Derive vader_label:  compound >= 0.05 → positive
-                         compound <= -0.05 → negative
-                         else             → neutral
-  - Derive star_label:   rating 4-5 → positive
-                         rating 3   → neutral
-                         rating 1-2 → negative
-
-Both label mappings are modelling choices stated explicitly here and in FINDINGS.md.
-Using star_label (not vader_label) to define positive/negative reviews in RQ4 keeps
-that analysis independent of the tool being audited in RQ3.
-
-Outputs
--------
-data/sample_scored.parquet
-outputs/tables/sentiment_summary.{csv,tex}
-"""
 import logging
 import sys
 from pathlib import Path
@@ -31,6 +10,7 @@ setup_logging()
 logger = logging.getLogger("amazon_sentiment.03_sentiment")
 
 
+# scores review texts with vader
 def score_vader(texts, batch_log_every: int = 50_000):
     from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
     sia = SentimentIntensityAnalyzer()
@@ -48,6 +28,7 @@ def score_vader(texts, batch_log_every: int = 50_000):
     return neg, neu, pos, compound
 
 
+# maps compound scores to sentiment labels
 def apply_vader_label(compound, pos_thresh: float, neg_thresh: float):
     labels = []
     for c in compound:
@@ -60,6 +41,7 @@ def apply_vader_label(compound, pos_thresh: float, neg_thresh: float):
     return labels
 
 
+# maps star ratings to sentiment labels
 def apply_star_label(ratings, positive_stars, neutral_stars, negative_stars):
     mapping = {}
     for s in positive_stars:
@@ -71,6 +53,7 @@ def apply_star_label(ratings, positive_stars, neutral_stars, negative_stars):
     return [mapping.get(int(r), "neutral") for r in ratings]
 
 
+# renders the sentiment summary as a latex table
 def _to_latex(df) -> str:
     lines = [
         r"\begin{table}[h]",
@@ -92,6 +75,7 @@ def _to_latex(df) -> str:
     return "\n".join(lines)
 
 
+# runs phase 3 end to end
 def main():
     import pandas as pd
 
@@ -105,7 +89,6 @@ def main():
     df = load_parquet("data/sample_clean.parquet")
     logger.info(f"Loaded sample_clean.parquet: {len(df):,} rows")
 
-    # ── VADER scoring ─────────────────────────────────────────────────────────
     logger.info("Running VADER …")
     neg, neu, pos, compound = score_vader(df["review_text"].tolist())
     df["vader_neg"] = neg
@@ -114,7 +97,6 @@ def main():
     df["vader_compound"] = compound
     logger.info("VADER scoring complete.")
 
-    # ── Derive labels ─────────────────────────────────────────────────────────
     v = cfg["vader"]
     sl = cfg["star_labels"]
 
@@ -135,11 +117,9 @@ def main():
         f"Star label distribution:\n{df['star_label'].value_counts().to_string()}"
     )
 
-    # ── Save ──────────────────────────────────────────────────────────────────
     save_parquet(df, scored_out)
     logger.info(f"Saved → {scored_out}")
 
-    # ── Summary table ─────────────────────────────────────────────────────────
     rows = []
     for cat in ["Beauty", "Sports"]:
         sub = df[df["category"] == cat]

@@ -1,22 +1,9 @@
-"""
-Phase 1 — Streaming reservoir sampling.
-
-For each (category × year) cell we draw a uniform random sample of
-`samples_per_cell` reviews in a single streaming pass, without ever loading
-the full dataset into memory.
-
-Outputs
--------
-data/sample_raw.parquet       — sampled reviews
-outputs/tables/sampling_summary.{csv,tex}  — population + sample counts per cell
-"""
 import logging
 import random
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Make `src/` importable when running the script directly
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from utils.io import load_config, save_parquet, parquet_exists, ensure_dir, setup_logging
@@ -25,35 +12,25 @@ log = setup_logging()
 logger = logging.getLogger("amazon_sentiment.01_sample")
 
 
-# ── Reservoir sampling helpers ────────────────────────────────────────────────
-
+# creates an empty reservoir state for one cell
 def _make_reservoir(k: int) -> dict:
-    """Empty reservoir state for a single cell."""
     return {"reservoir": [], "count": 0}
 
 
+# updates a reservoir with one streamed item
 def _update_reservoir(state: dict, item, k: int, rng: random.Random) -> None:
-    """
-    Algorithm R (Vitter 1985): maintain a uniform random sample of size k
-    from a stream without knowing the stream length in advance.
-    """
     state["count"] += 1
     n = state["count"]
     if n <= k:
         state["reservoir"].append(item)
     else:
-        j = rng.randint(1, n)  # 1-indexed, inclusive
+        j = rng.randint(1, n)
         if j <= k:
             state["reservoir"][j - 1] = item
 
 
-# ── Record parsing ────────────────────────────────────────────────────────────
-
+# extracts and validates one huggingface record
 def _parse_record(record: dict, category_name: str) -> dict | None:
-    """
-    Extract and validate a single HuggingFace record.
-    Returns None if the record should be skipped.
-    """
     text = (record.get("text") or "").strip()
     if not text:
         return None
@@ -62,7 +39,6 @@ def _parse_record(record: dict, category_name: str) -> dict | None:
     if ts is None:
         return None
     try:
-        # Timestamp is in milliseconds
         dt = datetime.fromtimestamp(int(ts) / 1000, tz=timezone.utc)
         year = dt.year
     except (ValueError, OSError):
@@ -80,10 +56,8 @@ def _parse_record(record: dict, category_name: str) -> dict | None:
     }
 
 
-# ── Stream source — HuggingFace datasets with JSONL fallback ─────────────────
-
+# opens a streaming huggingface dataset
 def _hf_iterator(hf_config: str, cfg: dict):
-    """Try load_dataset streaming; raises on failure."""
     from datasets import load_dataset
     ds = load_dataset(
         cfg["hf"]["dataset_name"],
@@ -95,15 +69,8 @@ def _hf_iterator(hf_config: str, cfg: dict):
     return ds
 
 
+# streams the category jsonl directly
 def _jsonl_iterator(jsonl_name: str, cfg: dict):
-    """
-    Fallback: stream the JSONL directly from the HuggingFace resolve URL.
-    Reads line-by-line — never loads the full file into memory.
-
-    The McAuley-Lab/Amazon-Reviews-2023 repo only hosts plain .jsonl files
-    under raw/review_categories/ (no .jsonl.gz variant), so there is exactly
-    one URL to try.
-    """
     import json
     import urllib.request
 
@@ -121,18 +88,14 @@ def _jsonl_iterator(jsonl_name: str, cfg: dict):
         raise RuntimeError(f"Could not retrieve JSONL for {jsonl_name} from {url}: {exc}")
 
 
+# builds a progress-wrapped record iterator with fallback
 def _make_iterator(hf_config: str, category_name: str, cfg: dict):
-    """
-    Return a tqdm-wrapped record iterator.
-    Tries HuggingFace datasets library first; falls back to direct JSONL streaming.
-    """
     try:
         from tqdm import tqdm
         ds = _hf_iterator(hf_config, cfg)
         return tqdm(ds, desc=category_name, unit=" reviews", mininterval=5)
     except Exception as exc:
         logger.warning(f"datasets library failed ({exc}); switching to JSONL fallback.")
-        # Find jsonl_name from cfg
         jsonl_name = next(
             v["jsonl_name"]
             for v in cfg["categories"].values()
@@ -145,8 +108,7 @@ def _make_iterator(hf_config: str, category_name: str, cfg: dict):
             return _jsonl_iterator(jsonl_name, cfg)
 
 
-# ── Per-category streaming pass ───────────────────────────────────────────────
-
+# streams and reservoir-samples one category
 def stream_and_sample(
     hf_config: str,
     category_name: str,
@@ -156,19 +118,10 @@ def stream_and_sample(
     seed: int,
     cfg: dict,
 ) -> tuple[dict[int, list[dict]], dict[int, int]]:
-    """
-    Stream the HuggingFace dataset for one category.
-
-    Returns
-    -------
-    samples : dict year → list of sampled records
-    pop_counts : dict year → total valid population count
-    """
     from datasets import load_dataset
 
     rng = random.Random(seed)
 
-    # One reservoir per year in the target range
     reservoirs: dict[int, dict] = {
         yr: _make_reservoir(k) for yr in range(year_start, year_end + 1)
     }
@@ -209,8 +162,7 @@ def stream_and_sample(
     return samples, pop_counts
 
 
-# ── Sampling summary table ────────────────────────────────────────────────────
-
+# builds the population vs sampled summary table
 def _build_summary(
     all_samples: dict[str, dict[int, list]],
     all_pops: dict[str, dict[int, int]],
@@ -237,11 +189,11 @@ def _build_summary(
     return pd.DataFrame(rows)
 
 
+# down-caps every cell to the smallest cell size
 def _enforce_equal_cells(
     all_samples: dict[str, dict[int, list]],
     seed: int,
 ) -> dict[str, dict[int, list]]:
-    """Down-cap every cell to the global minimum cell size."""
     import random as _random
 
     rng = _random.Random(seed)
@@ -263,8 +215,7 @@ def _enforce_equal_cells(
     return trimmed
 
 
-# ── LaTeX table renderer ──────────────────────────────────────────────────────
-
+# renders the sampling summary as a latex table
 def _to_latex(df: "pd.DataFrame") -> str:
     lines = [
         r"\begin{table}[h]",
@@ -286,8 +237,7 @@ def _to_latex(df: "pd.DataFrame") -> str:
     return "\n".join(lines)
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
+# runs phase 1 end to end
 def main():
     cfg = load_config()
 
@@ -323,7 +273,6 @@ def main():
     if enforce_equal:
         all_samples = _enforce_equal_cells(all_samples, seed)
 
-    # Flatten to a DataFrame
     import pandas as pd
     rows = [
         record
@@ -337,7 +286,6 @@ def main():
     save_parquet(df, raw_out)
     logger.info(f"Saved → {raw_out}")
 
-    # Sampling summary
     summary = _build_summary(all_samples, all_pops, k, enforce_equal)
     tables_dir = cfg["paths"]["tables_dir"]
     ensure_dir(tables_dir)
@@ -354,11 +302,9 @@ def main():
     logger.info(f"Sampling summary → {csv_path}")
     logger.info(f"Sampling summary (LaTeX) → {tex_path}")
 
-    # Print a compact preview
     print("\n=== Sampling Summary ===")
     print(summary.to_string(index=False))
 
-    # Log shortfalls
     shortfalls = summary[summary["shortfall"] > 0]
     if not shortfalls.empty:
         logger.warning(
@@ -366,7 +312,7 @@ def main():
             + shortfalls[["category", "year", "population_count"]].to_string(index=False)
         )
     else:
-        logger.info("No shortfall cells — all cells met the target sample size.")
+        logger.info("No shortfall cells - all cells met the target sample size.")
 
 
 if __name__ == "__main__":
