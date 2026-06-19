@@ -1,4 +1,4 @@
 step,rows_remaining,rows_dropped
 Drop empty/whitespace,200016,0
-Drop duplicate texts,193916,6100
-Language filter (keep English),187624,6292
+Drop duplicate texts,196454,3562
+Language filter (keep English),189587,6867

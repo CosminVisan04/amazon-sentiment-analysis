@@ -99,30 +99,26 @@ def _jsonl_iterator(jsonl_name: str, cfg: dict):
     """
     Fallback: stream the JSONL directly from the HuggingFace resolve URL.
     Reads line-by-line — never loads the full file into memory.
+
+    The McAuley-Lab/Amazon-Reviews-2023 repo only hosts plain .jsonl files
+    under raw/review_categories/ (no .jsonl.gz variant), so there is exactly
+    one URL to try.
     """
-    import gzip
     import json
     import urllib.request
 
-    base = "https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023/resolve/main/raw/review_categories"
-    # Try .jsonl.gz first, then plain .jsonl
-    for suffix in (".jsonl.gz", ".jsonl"):
-        url = f"{base}/{jsonl_name}{suffix}"
-        logger.info(f"JSONL fallback: trying {url}")
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "python-urllib"})
-            resp = urllib.request.urlopen(req, timeout=30)
-            if suffix == ".jsonl.gz":
-                fh = gzip.GzipFile(fileobj=resp)
-                for line in fh:
-                    yield json.loads(line.decode("utf-8"))
-            else:
-                for line in resp:
-                    yield json.loads(line.decode("utf-8"))
-            return
-        except Exception as exc:
-            logger.warning(f"  {url} failed: {exc}")
-    raise RuntimeError(f"Could not retrieve JSONL for {jsonl_name} from HuggingFace.")
+    url = (
+        "https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023/"
+        f"resolve/main/raw/review_categories/{jsonl_name}.jsonl"
+    )
+    logger.info(f"JSONL fallback: streaming {url}")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "python-urllib"})
+        resp = urllib.request.urlopen(req, timeout=30)
+        for line in resp:
+            yield json.loads(line.decode("utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"Could not retrieve JSONL for {jsonl_name} from {url}: {exc}")
 
 
 def _make_iterator(hf_config: str, category_name: str, cfg: dict):

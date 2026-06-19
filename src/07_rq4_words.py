@@ -44,6 +44,16 @@ from utils.plotting import set_style, save_figure, PALETTE
 setup_logging()
 logger = logging.getLogger("amazon_sentiment.07_rq4")
 
+# Keep negation words — they flip sentiment and matter for distinctive-word
+# analysis (e.g. "not good" should not lose "not" to stopword removal).
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+
+NEGATION_SAFE_STOP_WORDS = list(ENGLISH_STOP_WORDS - {"no", "nor", "not"})
+# Keeps contractions ("don't", "wasn't") as single tokens instead of
+# splitting on the apostrophe, which otherwise strands a bare "t"/"s" token
+# that min_df then discards — silently deleting the negation.
+NEGATION_TOKEN_PATTERN = r"(?u)\b[a-zA-Z]+(?:'[a-zA-Z]+)?\b"
+
 
 # ── Vectoriser helpers ────────────────────────────────────────────────────────
 
@@ -53,8 +63,8 @@ def _build_vectorizer(cfg: dict, texts: list[str]):
         lowercase=True,
         ngram_range=tuple(cfg["words"]["ngram_range"]),
         min_df=cfg["words"]["min_doc_freq"],
-        stop_words="english",
-        token_pattern=r"\b[a-zA-Z][a-zA-Z]+\b",
+        stop_words=NEGATION_SAFE_STOP_WORDS,
+        token_pattern=NEGATION_TOKEN_PATTERN,
         max_features=100_000,
     )
     vec.fit(texts)
@@ -74,8 +84,8 @@ def _tfidf_top(texts_i: list[str], texts_j: list[str], label_i: str, label_j: st
         lowercase=True,
         ngram_range=tuple(cfg["words"]["ngram_range"]),
         min_df=cfg["words"]["min_doc_freq"],
-        stop_words="english",
-        token_pattern=r"\b[a-zA-Z][a-zA-Z]+\b",
+        stop_words=NEGATION_SAFE_STOP_WORDS,
+        token_pattern=NEGATION_TOKEN_PATTERN,
         max_features=100_000,
     )
     all_texts = texts_i + texts_j

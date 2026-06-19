@@ -16,7 +16,9 @@ Outputs
 data/sample_clean.parquet
 outputs/tables/preprocessing_log.{csv,tex}
 """
+import html
 import logging
+import re
 import sys
 from pathlib import Path
 
@@ -26,6 +28,27 @@ from utils.io import load_config, save_parquet, load_parquet, parquet_exists, en
 
 setup_logging()
 logger = logging.getLogger("amazon_sentiment.02_preprocess")
+
+
+# ── Text cleaning ─────────────────────────────────────────────────────────────
+
+def clean_text(text: str) -> str:
+    """
+    Strip HTML markup and Amazon-specific markers that are not meaningful
+    review words (e.g. <br />, [[ASIN:...]]), and normalise apostrophe
+    variants to a single straight quote so contractions like "don't"
+    survive tokenisation intact. The corpus mixes mojibake ("â"), curly
+    ('‘'/'’'), and straight (') apostrophes for the same contraction
+    across different reviews; without normalising all of them, only some
+    contractions keep their negation token and the rest fragment into a
+    stray "t"/"s" token, which is exactly the artefact we're removing.
+    """
+    text = html.unescape(str(text))
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\[\[ASIN:[^\]]+\]\]", " ", text)
+    text = text.replace("â", "'").replace("’", "'").replace("‘", "'")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 # ── Language detection ────────────────────────────────────────────────────────
@@ -56,6 +79,28 @@ def _is_english(text: str) -> bool:
         return False
 
 
+def _is_english_with_progress(texts, log_every: int = 20_000):
+    """
+    Run _is_english over a list of texts, logging progress every `log_every`
+    rows. langdetect's per-call overhead (worse with a fixed seed) makes this
+    the slowest step in Phase 2, so visible progress matters more than speed here.
+    """
+    n = len(texts)
+    results = [False] * n
+    try:
+        from tqdm import tqdm
+        iterator = tqdm(texts, total=n, desc="  langdetect", unit="review")
+        for i, text in enumerate(iterator):
+            results[i] = _is_english(text)
+        return results
+    except ImportError:
+        for i, text in enumerate(texts):
+            results[i] = _is_english(text)
+            if (i + 1) % log_every == 0 or (i + 1) == n:
+                logger.info(f"    langdetect progress: {i + 1:,}/{n:,}")
+        return results
+
+
 def language_filter(df, seed: int = 42):
     import pandas as pd
 
@@ -71,7 +116,10 @@ def language_filter(df, seed: int = 42):
 
     # Slow pass: langdetect on survivors
     logger.info(f"  Running langdetect on {len(survivors):,} survivors …")
-    is_en = survivors["review_text"].apply(_is_english)
+    is_en = pd.Series(
+        _is_english_with_progress(survivors["review_text"].tolist()),
+        index=survivors.index,
+    )
     slow_reject_count = (~is_en).sum()
     logger.info(f"  Language langdetect-reject: {slow_reject_count:,} rows dropped")
 
@@ -125,9 +173,9 @@ def main():
 
     n0 = len(df)
 
-    # ── Step 1: Combine title + text → review_text ────────────────────────────
-    df["title"] = df["title"].fillna("").str.strip()
-    df["text"] = df["text"].fillna("").str.strip()
+    # ── Step 1: Clean HTML/markup, then combine title + text → review_text ────
+    df["title"] = df["title"].fillna("").apply(clean_text)
+    df["text"] = df["text"].fillna("").apply(clean_text)
     df["review_text"] = df.apply(
         lambda r: f"{r['title']}. {r['text']}" if r["title"] else r["text"],
         axis=1,
@@ -142,9 +190,9 @@ def main():
     df = df[~mask_empty].reset_index(drop=True)
     checkpoint("Drop empty/whitespace", n0, len(df))
 
-    # ── Step 4: Drop exact-duplicate review texts ─────────────────────────────
+    # ── Step 4: Drop exact-duplicate review texts (within category × year) ────
     n_before = len(df)
-    df = df.drop_duplicates(subset=["review_text"]).reset_index(drop=True)
+    df = df.drop_duplicates(subset=["category", "year", "review_text"]).reset_index(drop=True)
     checkpoint("Drop duplicate texts", n_before, len(df))
 
     # ── Step 5: Language filter ───────────────────────────────────────────────

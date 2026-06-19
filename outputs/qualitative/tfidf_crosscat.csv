@@ -1,51 +1,51 @@
 group,word,mean_tfidf
-Beauty & Personal Care,hair,0.027031483193477746
-Beauty & Personal Care,great,0.026965565786074126
-Beauty & Personal Care,love,0.026671775642734895
-Beauty & Personal Care,product,0.025741450411438386
-Beauty & Personal Care,stars,0.024432076035089755
-Beauty & Personal Care,good,0.01975830089153673
-Beauty & Personal Care,like,0.015491973393033785
-Beauty & Personal Care,use,0.01540203565123813
-Beauty & Personal Care,skin,0.013941098632605977
-Beauty & Personal Care,works,0.013896579734943836
-Beauty & Personal Care,br,0.011191827249487557
-Beauty & Personal Care,nice,0.010917226698389541
-Beauty & Personal Care,really,0.010650549324534447
-Beauty & Personal Care,just,0.01025019280426839
-Beauty & Personal Care,smell,0.009359778174188033
-Beauty & Personal Care,best,0.009256397323850318
-Beauty & Personal Care,color,0.009188283856812359
-Beauty & Personal Care,used,0.009176393734471381
-Beauty & Personal Care,easy,0.00911066523819276
-Beauty & Personal Care,buy,0.009069301814700144
-Beauty & Personal Care,smells,0.008760737302402422
-Beauty & Personal Care,price,0.00872651381121076
-Beauty & Personal Care,perfect,0.008351343589409458
-Beauty & Personal Care,scent,0.008295604793160716
-Beauty & Personal Care,quality,0.008098510379145118
-Sports & Outdoors,great,0.031963631626910634
-Sports & Outdoors,stars,0.02416123905640639
-Sports & Outdoors,good,0.021476031628792365
-Sports & Outdoors,quality,0.015197616909748034
-Sports & Outdoors,br,0.015025425142530148
-Sports & Outdoors,easy,0.013837526914177275
-Sports & Outdoors,product,0.013770947318407124
-Sports & Outdoors,love,0.013686234431323602
-Sports & Outdoors,nice,0.01255672585164163
-Sports & Outdoors,perfect,0.0124234418406998
-Sports & Outdoors,use,0.012243021467377949
-Sports & Outdoors,fit,0.011294186247514592
-Sports & Outdoors,works,0.011246689998956349
-Sports & Outdoors,like,0.011026325956038467
-Sports & Outdoors,just,0.010686611337779522
-Sports & Outdoors,price,0.01027796324879033
-Sports & Outdoors,bag,0.008325003833923107
-Sports & Outdoors,comfortable,0.008094015702251106
-Sports & Outdoors,water,0.007906249459880863
-Sports & Outdoors,size,0.007879952114634096
-Sports & Outdoors,work,0.007829290770435518
-Sports & Outdoors,bought,0.007606961387295104
-Sports & Outdoors,really,0.007455155206534441
-Sports & Outdoors,small,0.007375849720083852
-Sports & Outdoors,buy,0.007218406045187532
+Beauty & Personal Care,great,0.026991320637929826
+Beauty & Personal Care,love,0.026794997188556453
+Beauty & Personal Care,hair,0.026428431464954466
+Beauty & Personal Care,product,0.02548560726545307
+Beauty & Personal Care,stars,0.02536161582887177
+Beauty & Personal Care,not,0.021420958210907115
+Beauty & Personal Care,good,0.019615225646519074
+Beauty & Personal Care,use,0.0151065080935281
+Beauty & Personal Care,like,0.01508837103912797
+Beauty & Personal Care,works,0.013870078465359996
+Beauty & Personal Care,skin,0.013628007374460205
+Beauty & Personal Care,it's,0.012415023766010095
+Beauty & Personal Care,nice,0.010789365496289394
+Beauty & Personal Care,really,0.010407769002718099
+Beauty & Personal Care,just,0.009991040440830918
+Beauty & Personal Care,smell,0.009092427188383871
+Beauty & Personal Care,best,0.009078278828903111
+Beauty & Personal Care,easy,0.008978981550217681
+Beauty & Personal Care,color,0.008962584446696262
+Beauty & Personal Care,used,0.008949722252659506
+Beauty & Personal Care,buy,0.00880118069300615
+Beauty & Personal Care,smells,0.008578408139269888
+Beauty & Personal Care,price,0.008563301512233275
+Beauty & Personal Care,perfect,0.008296671492048994
+Beauty & Personal Care,great product,0.008186370268116788
+Sports & Outdoors,great,0.03212842068356443
+Sports & Outdoors,stars,0.026797761664506144
+Sports & Outdoors,good,0.02154962337025985
+Sports & Outdoors,not,0.01811932204388822
+Sports & Outdoors,quality,0.015086470997253128
+Sports & Outdoors,product,0.013986037047576425
+Sports & Outdoors,love,0.013934271238573713
+Sports & Outdoors,easy,0.013593155584715981
+Sports & Outdoors,nice,0.012528112162007252
+Sports & Outdoors,perfect,0.012418571371651692
+Sports & Outdoors,use,0.011959470514555542
+Sports & Outdoors,works,0.011525738484730538
+Sports & Outdoors,fit,0.011053433283605696
+Sports & Outdoors,it's,0.010844316176317
+Sports & Outdoors,like,0.010716808051480021
+Sports & Outdoors,just,0.010497534091757361
+Sports & Outdoors,price,0.01012366634452185
+Sports & Outdoors,bag,0.008130427112580623
+Sports & Outdoors,comfortable,0.00790541693545629
+Sports & Outdoors,no,0.007778474743313773
+Sports & Outdoors,water,0.007696353680408534
+Sports & Outdoors,size,0.007676297204445651
+Sports & Outdoors,work,0.007636064316310225
+Sports & Outdoors,bought,0.0074100491733716444
+Sports & Outdoors,really,0.007253891112956057

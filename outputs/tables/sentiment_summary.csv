@@ -1,5 +1,5 @@
 category,label_source,positive,neutral,negative,total
-Beauty,VADER,75923,5466,12193,93582
-Beauty,Star rating,70574,6976,16032,93582
-Sports,VADER,76653,5824,11565,94042
-Sports,Star rating,73515,6642,13885,94042
+Beauty,VADER,76321,5520,12420,94261
+Beauty,Star rating,71230,6990,16041,94261
+Sports,VADER,77624,6048,11654,95326
+Sports,Star rating,74744,6669,13913,95326

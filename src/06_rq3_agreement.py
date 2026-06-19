@@ -60,6 +60,18 @@ def spearman_with_ci(x, y, ci: float = 0.95) -> dict:
     return {"rho": float(rho), "p": float(p), "ci_lo": lo, "ci_hi": hi, "n": len(x)}
 
 
+# ── Majority-class baseline ───────────────────────────────────────────────────
+
+def majority_class_baseline(y_true) -> dict:
+    """
+    Accuracy a trivial classifier achieves by always predicting the most
+    frequent star_label class. Context for how much above chance/baseline
+    VADER's classification accuracy actually is.
+    """
+    counts = pd.Series(y_true).value_counts(normalize=True)
+    return {"majority_class": str(counts.index[0]), "baseline_accuracy": float(counts.iloc[0])}
+
+
 # ── Classification metrics ────────────────────────────────────────────────────
 
 def classification_metrics(y_true, y_pred) -> dict:
@@ -252,6 +264,25 @@ def main():
         )
     results["classification_per_category"] = metrics_per_cat
 
+    # ── Majority-class baseline ───────────────────────────────────────────────
+    baseline_overall = majority_class_baseline(df["star_label"])
+    baseline_per_cat = {
+        cat: majority_class_baseline(df[df["category"] == cat]["star_label"])
+        for cat in ["Beauty", "Sports"]
+    }
+    results["majority_class_baseline_overall"] = baseline_overall
+    results["majority_class_baseline_per_category"] = baseline_per_cat
+    logger.info(
+        f"Majority-class baseline (overall): {baseline_overall['majority_class']} "
+        f"= {baseline_overall['baseline_accuracy']:.4f} "
+        f"(VADER accuracy {metrics_overall['accuracy']:.4f})"
+    )
+    for cat in ["Beauty", "Sports"]:
+        b = baseline_per_cat[cat]
+        logger.info(
+            f"Majority-class baseline ({cat}): {b['majority_class']} = {b['baseline_accuracy']:.4f}"
+        )
+
     # ── Chi-square on agreement counts per category ───────────────────────────
     agree_beauty = (df[df["category"] == "Beauty"]["vader_label"] ==
                     df[df["category"] == "Beauty"]["star_label"]).sum()
@@ -303,6 +334,7 @@ def main():
         {"metric": "Macro-F1 (overall)", "value": metrics_overall["macro_f1"], "p": None, "ci_lo": None, "ci_hi": None},
         {"metric": "Kappa quadratic (overall)", "value": metrics_overall["kappa_quadratic"], "p": None, "ci_lo": None, "ci_hi": None},
         {"metric": "Chi2 Beauty vs Sports agreement", "value": chi2, "p": p_chi2, "ci_lo": None, "ci_hi": None},
+        {"metric": "Majority-class baseline accuracy (overall)", "value": baseline_overall["baseline_accuracy"], "p": None, "ci_lo": None, "ci_hi": None},
     ]
     pd.DataFrame(stat_rows).to_csv(stats_dir / "rq3.csv", index=False)
     length_df.to_csv(tables_dir / "rq3_agreement_by_length.csv", index=False)
@@ -317,7 +349,9 @@ def main():
         sp = spearman_per_cat[cat]
         print(f"Spearman rho ({cat}):   {sp['rho']:.4f}  p={sp['p']:.4e}  CI=[{sp['ci_lo']:.4f}, {sp['ci_hi']:.4f}]")
 
-    print(f"\nOverall: accuracy={metrics_overall['accuracy']:.4f}  "
+    print(f"\nMajority-class baseline (overall): {baseline_overall['majority_class']} "
+          f"= {baseline_overall['baseline_accuracy']:.4f}")
+    print(f"Overall: accuracy={metrics_overall['accuracy']:.4f}  "
           f"macro-F1={metrics_overall['macro_f1']:.4f}  "
           f"kappa={metrics_overall['kappa_quadratic']:.4f}")
     for cat in ["Beauty", "Sports"]:
