@@ -21,14 +21,6 @@ python src/03_sentiment.py
 # 4. force re-run everything from scratch
 python run_all.py --force   # then delete data parquet files manually
 ```
-
-`requirements.txt` only pins the domain-specific packages (HuggingFace `datasets`,
-`vaderSentiment`, `langdetect`, `pymannkendall`, etc). It assumes `pandas`, `numpy`,
-`scipy`, `statsmodels`, `pyarrow`, and `PyYAML` are already available in your
-environment - install them separately if they aren't.
-
-Use `python3` in your terminal.
-
 ---
 
 ## Pipeline phases
